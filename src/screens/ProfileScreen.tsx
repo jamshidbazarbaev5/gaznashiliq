@@ -59,48 +59,60 @@ const ProfileScreen = () => {
 
   const hasFetched = useRef(false);
 
+  const fetchUserProfile = async () => {
+    console.log('Fetching profile with token:', accessToken ? 'Yes' : 'No');
+    console.log('Current user state:', user);
+
+    // Only fetch if we have a token and haven't fetched yet
+    if (!accessToken) {
+      console.log('No access token available');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const profileData = await authService.getUserProfile(accessToken);
+      console.log('Received profile data:', profileData);
+      await updateUser(profileData);
+      console.log('Updated user in context');
+      setError(null);
+      hasFetched.current = true;
+    } catch (fetchError) {
+      console.error('Error fetching user profile:', fetchError);
+      hasFetched.current = false; // Reset on error so we can retry
+
+      // Handle token expiration
+      const wasLoggedOut = await handleApiError(
+        fetchError,
+        t('profile.loadError'),
+      );
+
+      if (!wasLoggedOut) {
+        setError(t('profile.loadError'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Only fetch user profile once on mount if user data is missing
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      // Only fetch if user data is missing, we have a token, and we haven't fetched yet
-      if (!accessToken || user || hasFetched.current) {
-        return;
-      }
+    console.log('useEffect running, user:', user ? 'exists' : 'null');
+    console.log('hasFetched:', hasFetched.current);
 
-      hasFetched.current = true;
-      setLoading(true);
-      try {
-        const profileData = await authService.getUserProfile(accessToken);
-        await updateUser(profileData);
-        setError(null);
-      } catch (fetchError) {
-        console.error('Error fetching user profile:', fetchError);
-        hasFetched.current = false; // Reset on error so we can retry
-
-        // Handle token expiration
-        const wasLoggedOut = await handleApiError(
-          fetchError,
-          t('profile.loadError'),
-        );
-
-        if (!wasLoggedOut) {
-          setError(t('profile.loadError'));
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [accessToken, user, updateUser, handleApiError, t]);
+    if (!user && !hasFetched.current) {
+      console.log('Initiating profile fetch');
+      fetchUserProfile();
+    }
+  }, [accessToken, user]);
 
   // Use user data from context
   const displayUserProfile = {
-    name: user?.full_name || 'Йулдашов Аббос',
+    name: user?.full_name || '',
     type: t('profile.userType'),
-    phone: user?.phone || '+998 00 000-00-00',
-    email: user?.email || 'email@mail.com',
-    region: user?.region || 'г. Нукус',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    region: user?.region || '',
   };
 
   const handleEditField = (type: 'name' | 'email' | 'phone' | 'region') => {
@@ -153,8 +165,17 @@ const ProfileScreen = () => {
         updateData,
       );
 
+      console.log('Updated profile received:', updatedProfile);
+
       // Update user data in context and local storage
       await updateUser(updatedProfile);
+
+      // Close the modal
+      setEditModalVisible(false);
+      setEditField(null);
+
+      // Force a refresh of the profile data
+      await fetchUserProfile();
 
       showToast(t('profile.updated'), 'success');
     } catch (updateError) {
@@ -167,7 +188,7 @@ const ProfileScreen = () => {
       );
 
       if (!wasLoggedOut) {
-        throw updateError; // Re-throw to be handled by modal
+        showToast(t('modal.saveError'), 'error');
       }
     } finally {
       setUpdating(false);
@@ -190,8 +211,16 @@ const ProfileScreen = () => {
         updateData,
       );
 
+      console.log('Updated profile after region change:', updatedProfile);
+
       // Update user data in context and local storage
       await updateUser(updatedProfile);
+
+      // Close the modal
+      setRegionModalVisible(false);
+
+      // Force a refresh of the profile data
+      await fetchUserProfile();
 
       showToast(t('profile.regionUpdated'), 'success');
     } catch (updateError) {
@@ -335,9 +364,9 @@ const ProfileScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+        {/* <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
           <Icon name="edit" size={20} tintColor={colors.text} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -374,7 +403,18 @@ const ProfileScreen = () => {
             </View>
           </View> */}
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{displayUserProfile.name}</Text>
+            <TouchableOpacity
+              onPress={() => handleEditField('name')}
+              style={styles.nameContainer}
+              disabled={updating}>
+              <Text style={styles.userName}>{displayUserProfile.name}</Text>
+              <Icon
+                name="edit"
+                size={14}
+                tintColor={colors.textSecondary}
+                style={styles.editIcon}
+              />
+            </TouchableOpacity>
             <Text style={styles.userType}>{displayUserProfile.type}</Text>
           </View>
         </View>
@@ -390,7 +430,7 @@ const ProfileScreen = () => {
               style={styles.editButton}
               // onPress={() => handleEditField('phone')}
               disabled={updating}>
-              <Icon name="edit" size={16} tintColor={colors.textSecondary} />
+              {/* <Icon name="edit" size={16} tintColor={colors.textSecondary} /> */}
             </TouchableOpacity>
           </View>
 
@@ -435,17 +475,9 @@ const ProfileScreen = () => {
 
         {/* Menu Options */}
         <View style={[styles.menuSection, updating && styles.disabledCard]}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleEditField('name')}
-            disabled={updating}>
-            <Text style={styles.menuText}>{t('profile.editProfile')}</Text>
-            <Icon name="edit" size={16} tintColor={colors.textSecondary} />
-          </TouchableOpacity>
+          {/* <View style={styles.separator} /> */}
 
-          <View style={styles.separator} />
-
-          <View style={styles.separator} />
+          {/* <View style={styles.separator} /> */}
 
           <TouchableOpacity
             style={styles.menuItem}
@@ -522,6 +554,14 @@ const ProfileScreen = () => {
 
 const createStyles = (colors: any, theme: string) =>
   StyleSheet.create({
+    nameContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    editIcon: {
+      marginTop: 4,
+    },
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -578,7 +618,8 @@ const createStyles = (colors: any, theme: string) =>
       borderColor: colors.border,
     },
     userInfo: {
-      flex: 1,
+      display:"flex",
+      justifyContent:"space-between"
     },
     userName: {
       fontSize: 20,

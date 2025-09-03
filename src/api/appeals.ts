@@ -17,6 +17,7 @@ export interface AppealResponse {
     full_name: string;
     phone: string;
   };
+  created_at?: string;
 }
 
 export interface Appeal {

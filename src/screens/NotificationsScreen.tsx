@@ -208,9 +208,34 @@ const NotificationsScreen = ({navigation}: any) => {
   };
 
   const extractAppealNumber = (text: string) => {
-    // Extract appeal number from text (e.g., "7F97B348CB" from "Казначейство ответило на ваше обращение 7F97B348CB")
-    const match = text.match(/обращение\s+([A-F0-9]+)/i);
-    return match ? `№${match[1]}` : null;
+    // Extract appeal number from text
+    const match = text.match(/[A-F0-9]{10}/);
+    return match ? match[0] : null;
+  };
+
+  const getNotificationType = (type: string) => {
+    switch (type) {
+      case "Статус обновлен":
+        return t('notifications.type.status_updated');
+      case "Получен ответ":
+        return t('notifications.type.response_received');
+      default:
+        return type;
+    }
+  };
+
+  const getNotificationTranslation = (notification: ApiNotification) => {
+    const appealNumber = extractAppealNumber(notification.text);
+    if (!appealNumber) return notification.text;
+
+    if (notification.type === "Статус обновлен") {
+      return t('notifications.status_updated');
+    } else if (notification.text.includes('принято в обработку')) {
+      return t('notifications.appeal_in_progress').replace('{number}', appealNumber);
+    } else if (notification.type === "Получен ответ") {
+      return t('notifications.appeal_response').replace('{number}', appealNumber);
+    }
+    return notification.text;
   };
 
   const renderNotificationItem = ({item}: {item: ApiNotification}) => {
@@ -243,13 +268,13 @@ const NotificationsScreen = ({navigation}: any) => {
                 styles.notificationTitle,
                 !item.is_read && styles.unreadTitle,
               ]}>
-              {item.type}
+              {getNotificationType(item.type)}
             </Text>
             {appealNumber && (
-              <Text style={styles.appealNumber}>{appealNumber}</Text>
+              <Text style={styles.appealNumber}>№{appealNumber}</Text>
             )}
           </View>
-          <Text style={styles.notificationMessage}>{item.text}</Text>
+          <Text style={styles.notificationMessage}>{getNotificationTranslation(item)}</Text>
           <View style={styles.notificationFooter}>
             <Text style={styles.notificationDate}>{formatDate()}</Text>
             <Text style={styles.notificationTime}>{formatTime()}</Text>
@@ -352,10 +377,10 @@ const NotificationsScreen = ({navigation}: any) => {
               style={styles.bottomSheetContent}
               showsVerticalScrollIndicator={false}>
               <Text style={styles.modalTitle}>
-                {selectedNotification?.type}
+                {getNotificationType(selectedNotification?.type || '')}
               </Text>
               <Text style={styles.modalMessage}>
-                {selectedNotification?.text}
+                {selectedNotification ? getNotificationTranslation(selectedNotification) : ''}
               </Text>
               {selectedNotification?.appeal && (
                 <TouchableOpacity

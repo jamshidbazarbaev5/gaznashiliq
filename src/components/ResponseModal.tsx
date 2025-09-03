@@ -26,6 +26,10 @@ interface ResponseModalProps {
     id: number;
     file: string;
   }>;
+  answerer?: {
+    full_name: string;
+    phone: string;
+  };
   onFileDownload?: (file: any, index: number) => void;
 }
 
@@ -37,6 +41,7 @@ const ResponseModal = ({
   responseId,
   responseText,
   responseFiles = [],
+  answerer,
   onFileDownload,
 }: ResponseModalProps) => {
   const [rating, setRating] = useState<number>(0);
@@ -174,21 +179,13 @@ const ResponseModal = ({
           key={i}
           onPress={() => handleRatingPress(i)}
           style={styles.starButton}>
-          <View
+          <Text
             style={[
-              styles.starContainer,
-              isActive
-                ? styles.activeStarContainer
-                : styles.inactiveStarContainer,
+              styles.starIcon,
+              isActive ? styles.activeStarIcon : styles.inactiveStarIcon,
             ]}>
-            <Text
-              style={[
-                styles.starIcon,
-                isActive ? styles.activeStarIcon : styles.inactiveStarIcon,
-              ]}>
-              ★
-            </Text>
-          </View>
+            ★
+          </Text>
         </TouchableOpacity>,
       );
     }
@@ -217,6 +214,19 @@ const ResponseModal = ({
           </View>
 
           <ScrollView style={styles.content}>
+            {/* Answerer information */}
+            {answerer && (
+              <View style={styles.answererSection}>
+                <Text style={styles.answererTitle}>{t('modal.answerer')}</Text>
+                <Text style={styles.answererInfo}>
+                  {t('modal.full_name')}: {answerer.full_name}
+                </Text>
+                <Text style={styles.answererInfo}>
+                  {t('modal.phone')}: {answerer.phone}
+                </Text>
+              </View>
+            )}
+
             <Text style={styles.responseText}>
               {String(responseText || t('common.no_response'))}
             </Text>
@@ -265,9 +275,6 @@ const ResponseModal = ({
                         <Text style={styles.responseFileSize}>
                           {t('modal.click_to_download')}
                         </Text>
-                      </View>
-                      <View style={styles.responseDownloadButton}>
-                        <Text style={styles.responseDownloadIcon}>🌐</Text>
                       </View>
                     </TouchableOpacity>
                   );
@@ -379,27 +386,15 @@ const styles = StyleSheet.create({
   starButton: {
     marginRight: 8,
   },
-  starContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeStarContainer: {
-    backgroundColor: '#3B82F6',
-  },
-  inactiveStarContainer: {
-    backgroundColor: '#E5E7EB',
-  },
   starIcon: {
-    fontSize: 18,
+    fontSize: 32,
+    padding: 4,
   },
   activeStarIcon: {
-    color: '#ffffff',
+    color: '#FFD700', // Yellow color for active stars
   },
   inactiveStarIcon: {
-    color: '#9CA3AF',
+    color: '#D3D3D3', // Light gray color for inactive stars
   },
   userRatingText: {
     fontSize: 14,
@@ -438,6 +433,23 @@ const styles = StyleSheet.create({
   },
   ratedButton: {
     backgroundColor: '#28A745',
+  },
+  answererSection: {
+    backgroundColor: '#F9FAFB',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  answererTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  answererInfo: {
+    fontSize: 14,
+    color: '#4B5563',
+    marginBottom: 4,
   },
   filesSection: {
     marginBottom: 20,

@@ -142,22 +142,32 @@ const AppealStatusScreen = ({navigation, route}: any) => {
   };
 
   const renderStatusItem = (
-    iconName: 'SMS_1' | 'Show' | 'Tick_Circle',
+    iconName: string,
     text: string,
     isActive: boolean,
     isCompleted: boolean,
     isLast: boolean = false,
     stepNumber: number,
   ) => {
+    // Define status colors
+    const statusColors = {
+      completed: '#34C759', // Success green
+      active: '#007AFF', // iOS blue
+      inactive: '#8E8E93', // Gray
+      rejected: '#34C759', // Success green
+    };
+
     let statusStyle = styles.statusItemInactive;
     let iconStyle = styles.statusIconInactive;
     let textStyle = styles.statusTextInactive;
     let connectingLineStyle = styles.connectingLineInactive;
     let stepNumberStyle = styles.stepNumberInactive;
     let stepContainerStyle = styles.stepContainerInactive;
+    let currentColor = statusColors.inactive;
 
     if (isCompleted) {
       if (appealData?.status === 'rejected') {
+        currentColor = statusColors.rejected;
         statusStyle = styles.statusItemRejected;
         iconStyle = styles.statusIconRejected;
         textStyle = styles.statusTextRejected;
@@ -165,6 +175,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
         stepNumberStyle = styles.stepNumberRejected;
         stepContainerStyle = styles.stepContainerRejected;
       } else if (appealData?.status === 'completed') {
+        currentColor = statusColors.completed;
         statusStyle = styles.statusItemAccepted;
         iconStyle = styles.statusIconAccepted;
         textStyle = styles.statusTextAccepted;
@@ -172,6 +183,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
         stepNumberStyle = styles.stepNumberAccepted;
         stepContainerStyle = styles.stepContainerAccepted;
       } else {
+        currentColor = statusColors.completed;
         statusStyle = styles.statusItemCompleted;
         iconStyle = styles.statusIconCompleted;
         textStyle = styles.statusTextCompleted;
@@ -180,6 +192,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
         stepContainerStyle = styles.stepContainerCompleted;
       }
     } else if (isActive) {
+      currentColor = statusColors.active;
       statusStyle = styles.statusItemActive;
       iconStyle = styles.statusIconActive;
       textStyle = styles.statusTextActive;
@@ -328,12 +341,6 @@ const AppealStatusScreen = ({navigation, route}: any) => {
                   key={index}
                   style={styles.fileItem}
                   onPress={() => handleFileOpen(file, index)}>
-                  <View style={styles.fileIcon}>
-                    <Icon
-                      name={fileType === 'image' ? 'Show' : 'SMS_1'}
-                      size={18}
-                    />
-                  </View>
                   <View style={styles.fileInfo}>
                     <Text style={styles.fileName} numberOfLines={1}>
                       {fileName}
@@ -342,7 +349,6 @@ const AppealStatusScreen = ({navigation, route}: any) => {
                       {t('modal.click_to_download')}
                     </Text>
                   </View>
-                
                 </TouchableOpacity>
               );
             })
@@ -437,7 +443,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
                     }%`,
                     backgroundColor:
                       appealData.status === 'rejected'
-                        ? colors.error
+                        ? colors.success
                         : appealData.status === 'completed'
                         ? colors.success
                         : colors.accent,
@@ -458,7 +464,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
 
           {/* Step 1: Submit Appeal - Always completed */}
           {renderStatusItem(
-            'SMS_1',
+            'message-square',
             t('appeals.submitAppeal'),
             false,
             true,
@@ -468,7 +474,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
 
           {/* Step 2: Under Review */}
           {renderStatusItem(
-            'Show',
+            'search',
             t('appeals.under_review'),
             appealData.status === 'under_review',
             appealData.status === 'completed' ||
@@ -480,7 +486,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
           {/* Step 3: Final Decision */}
           {appealData.status === 'rejected' &&
             renderStatusItem(
-              'SMS_1',
+              'x-circle',
               t('appeals.appeal_rejected'),
               false,
               true,
@@ -490,7 +496,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
 
           {appealData.status === 'completed' &&
             renderStatusItem(
-              'Tick_Circle',
+              'check-circle',
               t('appeals.appeal_accepted'),
               false,
               true,
@@ -500,7 +506,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
 
           {appealData.status === 'under_review' &&
             renderStatusItem(
-              'Tick_Circle',
+              'clock',
               t('appeals.final_decision'),
               false,
               false,
@@ -543,6 +549,7 @@ const AppealStatusScreen = ({navigation, route}: any) => {
         responseId={appealData.response?.id}
         responseText={String(responseText || t('common.no_response'))}
         responseFiles={appealData.response?.files || []}
+        answerer={appealData.response?.answerer}
         onFileDownload={handleFileOpen}
       />
       {/* {console.log('Modal visible state:', responseModalVisible)} */}
@@ -676,59 +683,84 @@ const createStyles = (colors: any, _theme: string) =>
     },
 
     statusSection: {
-      marginBottom: 24,
+      marginBottom: 32,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 20,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     statusTitle: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 16,
+      marginBottom: 24,
+      textAlign: 'center',
     },
     progressBarContainer: {
-      marginBottom: 24,
+      marginBottom: 32,
       alignItems: 'center',
     },
     progressBar: {
       width: '100%',
-      height: 8,
-      backgroundColor: colors.border,
-      borderRadius: 4,
+      height: 6,
+      backgroundColor: '#E9ECEF',
+      borderRadius: 8,
       overflow: 'hidden',
-      marginBottom: 8,
+      marginBottom: 12,
     },
     progressFill: {
       height: '100%',
-      borderRadius: 4,
+      borderRadius: 8,
+      transition: 'width 0.3s ease-in-out',
     },
     progressText: {
       fontSize: 14,
       color: colors.textSecondary,
-      fontWeight: '500',
+      fontWeight: '600',
+      letterSpacing: 0.5,
     },
     statusItemContainer: {
-      marginBottom: 16,
+      marginBottom: 24,
+      position: 'relative',
     },
     statusItem: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      paddingVertical: 8,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
     },
     statusIconContainer: {
       alignItems: 'center',
-      marginRight: 20,
+      marginRight: 16,
       position: 'relative',
     },
     stepContainer: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       position: 'absolute',
-      top: -8,
-      left: 18,
+      top: -10,
+      left: 20,
       zIndex: 2,
       borderWidth: 2,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 2,
     },
     stepNumber: {
       fontSize: 12,
@@ -741,7 +773,8 @@ const createStyles = (colors: any, _theme: string) =>
     statusDescription: {
       fontSize: 14,
       marginTop: 4,
-      fontStyle: 'italic',
+      color: '#6C757D',
+      letterSpacing: 0.2,
     },
     statusItemCompleted: {},
     statusItemActive: {},
@@ -749,125 +782,132 @@ const createStyles = (colors: any, _theme: string) =>
     statusItemRejected: {},
     statusItemAccepted: {},
     statusIcon: {
-      width: 60,
-      height: 60,
-      borderRadius: 30,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 3,
-      elevation: 3,
+      borderWidth: 2,
+      elevation: 2,
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: 2,
+        height: 1,
       },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
     },
     connectingLine: {
-      width: 4,
-      height: 40,
+      width: 2,
+      height: 36,
       marginTop: 4,
-      borderRadius: 2,
+      alignSelf: 'center',
+      marginLeft: 23,
     },
     connectingLineCompleted: {
-      backgroundColor: colors.accent,
+      backgroundColor: '#34C759',
     },
     connectingLineActive: {
-      backgroundColor: colors.accent,
+      backgroundColor: '#007AFF',
     },
     connectingLineInactive: {
-      backgroundColor: colors.border,
+      backgroundColor: '#E9ECEF',
     },
     connectingLineRejected: {
-      backgroundColor: colors.error,
+      backgroundColor: '#34C759',
     },
     connectingLineAccepted: {
-      backgroundColor: colors.success,
+      backgroundColor: '#34C759',
     },
     statusIconCompleted: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
-      opacity: 1,
+      backgroundColor: '#E8F5E9',
+      borderColor: '#34C759',
     },
     statusIconActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
-      opacity: 1,
+      backgroundColor: '#E3F2FD',
+      borderColor: '#007AFF',
     },
     statusIconInactive: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      opacity: 0.6,
+      backgroundColor: '#F8F9FA',
+      borderColor: '#DEE2E6',
     },
     statusIconRejected: {
-      backgroundColor: colors.error,
-      borderColor: colors.error,
-      opacity: 1,
+      backgroundColor: '#E8F5E9',
+      borderColor: '#34C759',
     },
     statusIconAccepted: {
-      backgroundColor: colors.success,
-      borderColor: colors.success,
-      opacity: 1,
+      backgroundColor: '#E8F5E9',
+      borderColor: '#34C759',
     },
     statusIconText: {
-      fontSize: 16,
+      fontSize: 20,
     },
     statusText: {
-      fontSize: 17,
+      fontSize: 16,
       fontWeight: '600',
-      marginBottom: 2,
+      marginBottom: 4,
+      letterSpacing: 0.3,
     },
     statusTextCompleted: {
-      color: colors.text,
+      color: '#34C759',
     },
     statusTextActive: {
-      color: colors.accent,
+      color: '#007AFF',
     },
     statusTextInactive: {
-      color: colors.textSecondary,
+      color: '#8E8E93',
     },
     statusTextRejected: {
-      color: colors.error,
+      color: '#34C759',
     },
     statusTextAccepted: {
-      color: colors.success,
+      color: '#34C759',
     },
     // Step number styles
     stepContainerCompleted: {
-      backgroundColor: colors.accent,
-      borderColor: colors.surface,
+      backgroundColor: '#34C759',
+      borderColor: '#ffffff',
     },
     stepContainerActive: {
-      backgroundColor: colors.accent,
-      borderColor: colors.surface,
+      backgroundColor: '#007AFF',
+      borderColor: '#ffffff',
     },
     stepContainerInactive: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
+      backgroundColor: '#F8F9FA',
+      borderColor: '#DEE2E6',
     },
     stepContainerRejected: {
-      backgroundColor: colors.error,
-      borderColor: colors.surface,
+      backgroundColor: '#34C759',
+      borderColor: '#ffffff',
     },
     stepContainerAccepted: {
-      backgroundColor: colors.success,
-      borderColor: colors.surface,
+      backgroundColor: '#34C759',
+      borderColor: '#ffffff',
     },
     stepNumberCompleted: {
-      color: colors.surface,
+      color: '#ffffff',
+      fontSize: 13,
+      fontWeight: '600',
     },
     stepNumberActive: {
-      color: colors.surface,
+      color: '#ffffff',
+      fontSize: 13,
+      fontWeight: '600',
     },
     stepNumberInactive: {
-      color: colors.textSecondary,
+      color: '#8E8E93',
+      fontSize: 13,
+      fontWeight: '600',
     },
     stepNumberRejected: {
-      color: colors.surface,
+      color: '#ffffff',
+      fontSize: 13,
+      fontWeight: '600',
     },
     stepNumberAccepted: {
-      color: colors.surface,
+      color: '#ffffff',
+      fontSize: 13,
+      fontWeight: '600',
     },
     buttonContainer: {
       paddingBottom: 20,
@@ -879,7 +919,7 @@ const createStyles = (colors: any, _theme: string) =>
       marginBottom: 12,
     },
     responseButtonRed: {
-      backgroundColor: colors.error,
+      backgroundColor: colors.success,
     },
     responseButtonGreen: {
       backgroundColor: colors.success,

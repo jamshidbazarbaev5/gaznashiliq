@@ -5,21 +5,60 @@ import React, {
   ReactNode,
   useMemo,
   useCallback,
+  useEffect,
 } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type Language = 'uz' | 'ru' | 'kk';
+export type Language = 'uz' | 'ru' | 'en' | null;
+
+const LANGUAGE_STORAGE_KEY = '@app_language';
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => Promise<void>;
   t: (key: string) => string;
+  isLanguageSelected: boolean;
 }
 
 interface LanguageProviderProps {
   children: ReactNode;
 }
 
+// Add English translations
 const translations = {
+  en: {
+    // Common
+    'common.save': 'Save',
+    'common.cancel': 'Cancel',
+    'common.edit': 'Edit',
+    'common.delete': 'Delete',
+    'common.confirm': 'Confirm',
+    'common.back': 'Back',
+    'common.file': 'Add file',
+    'common.success': 'Success',
+    'common.error': 'Error occurred',
+    'common.loading': 'Loading...',
+    'common.see': 'See more',
+
+    // Auth
+    'auth.login': 'Login',
+    'auth.register': 'Register',
+    'auth.phone': 'Phone number',
+    'auth.password': 'Password',
+    'auth.notregistered': 'Not registered',
+
+    // Notifications
+    'notifications.status_updated': 'Appeal status updated',
+    'notifications.appeal_in_progress':
+      'Your appeal {number} is being processed',
+    'notifications.appeal_response':
+      'Treasury has responded to your appeal {number}',
+    'notifications.type.status_updated': 'Status updated',
+    'modal.answerer': 'Answered by',
+    'modal.full_name': 'Full Name',
+    'modal.phone': 'Phone',
+    'notifications.type.response_received': 'Response received',
+  },
   uz: {
     // Common
     'common.save': 'Saqlash',
@@ -28,6 +67,17 @@ const translations = {
     'common.delete': "O'chirish",
     'common.confirm': 'Tasdiqlash',
     'common.back': 'Orqaga',
+    // Notifications
+    'notifications.status_updated': 'Murojaat holati yangilandi',
+    'notifications.appeal_in_progress':
+      "Murojatingiz {number} ko'rib chiqishga qabul qilindi",
+    'notifications.appeal_response':
+      'G‘azna sizning {number} murojaatingizga javob berdi',
+    'notifications.type.status_updated': 'Holat yangilandi',
+    'modal.answerer': 'Javob bergan',
+    'modal.full_name': "To'liq ismi",
+    'modal.phone': 'Telefon',
+    'notifications.type.response_received': 'Javob olindi',
     'common.file': 'Fayl qosish',
     'common.next': 'Keyingi',
     'common.done': 'Tayyor',
@@ -126,7 +176,8 @@ const translations = {
     'profile.selectLanguageHint': 'Tilni tanlash uchun bosing',
 
     // Appeals
-    'appeals.title': 'Управление казначейской службы Республики Каракалпакстан',
+    'appeals.title':
+      'Qoraqalpog‘iston Respublikasi G‘aznachilik xizmati boshqarmasi',
     'appeals.myAppeals': 'Mening murojaatlarim',
     'appeals.submitAppeal': 'Murojaat yuborish',
     'appeals.status': 'Holati',
@@ -197,6 +248,17 @@ const translations = {
     'common.send_appeal': 'Отправить обращение',
     'common.cancel': 'Отменить',
     'common.see': 'Подробнее',
+    'modal.answerer': 'Ответил',
+    'modal.full_name': 'ФИО',
+    'modal.phone': 'Телефон',
+    // Notifications
+    'notifications.status_updated': 'Статус обращения обновлен',
+    'notifications.appeal_in_progress':
+      'Ваше обращение {number} принято в обработку',
+    'notifications.appeal_response':
+      'Казначейство ответило на ваше обращение {number}',
+    'notifications.type.status_updated': 'Статус обновлен',
+    'notifications.type.response_received': 'Получен ответ',
     'common.see_2': 'Посмотреть ответ ',
     'common.edit': 'Редактировать',
     'common.delete': 'Удалить',
@@ -368,6 +430,17 @@ const translations = {
     'common.cancel': 'Biykar etıw',
     'common.edit': 'Óńdew',
     'common.delete': 'Óshiriw',
+    'modal.answerer': 'Juwap bergen',
+    'modal.full_name': 'Tolıq atı',
+    'modal.phone': 'Telefon',
+    // Notifications
+    'notifications.status_updated': 'Murajaat jaǵdayı jańalandı',
+    'notifications.appeal_in_progress':
+      'Sizdiń {number} murajaatıńız qaraw ushın qabıl etildi',
+    'notifications.appeal_response':
+      'Qazna sizdiń {number} murajaatıńızǵa juwap berdi',
+    'notifications.type.status_updated': 'Jaǵday jańalandı',
+    'notifications.type.response_received': 'Juwap alındı',
     'common.confirm': 'Tastıyıqlaw',
     'common.back': 'Artqa',
     'common.next': 'Kelesi',
@@ -468,7 +541,7 @@ const translations = {
 
     // Appeals
     'appeals.title':
-      'Qaraqalpaqstan Respublikası Xazinadarlik qızmetiniń basqarması',
+      'Qaraqalpaqstan Respublikası Qaznashılıq xızmeti basqarması',
     'appeals.myAppeals': 'Mening murajaatlarım',
     'appeals.submitAppeal': 'Murajaat jiberiw',
     'appeals.status': 'Háleti',
@@ -542,15 +615,42 @@ const LanguageContext = createContext<LanguageContextType | undefined>(
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({
   children,
 }) => {
-  const [language, setLanguageState] = useState<Language>('uz');
+  const [language, setLanguageState] = useState<Language>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    const loadLanguage = async () => {
+      try {
+        const storedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (storedLanguage) {
+          setLanguageState(storedLanguage as Language);
+        }
+      } catch (error) {
+        console.error('Error loading language:', error);
+      } finally {
+        setInitialized(true);
+      }
+    };
+    loadLanguage();
+  }, []);
 
   const setLanguage = useCallback(async (lang: Language) => {
-    setLanguageState(lang);
+    try {
+      if (lang) {
+        await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+      }
+      setLanguageState(lang);
+    } catch (error) {
+      console.error('Error saving language:', error);
+    }
   }, []);
 
   const t = useMemo(
     () =>
       (key: string): string => {
+        if (!language || !translations[language]) {
+          return key;
+        }
         return (translations[language] as any)[key] || key;
       },
     [language],
@@ -561,9 +661,14 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
       language,
       setLanguage,
       t,
+      isLanguageSelected: initialized && language !== null,
     }),
-    [language, setLanguage, t],
+    [language, setLanguage, t, initialized],
   );
+
+  if (!initialized) {
+    return null;
+  }
 
   return (
     <LanguageContext.Provider value={contextValue}>

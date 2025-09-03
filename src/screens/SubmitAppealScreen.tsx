@@ -286,7 +286,7 @@ const SubmitAppealScreen = ({navigation}: any) => {
           </View>
         )}
 
-        <Text style={styles.fileRestrictions}>{t('common.edit')}</Text>
+        {/* <Text style={styles.fileRestrictions}>{t('common.edit')}</Text> */}
 
         <View style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>{t('auth.region')}</Text>

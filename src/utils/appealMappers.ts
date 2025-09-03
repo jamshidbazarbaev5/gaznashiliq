@@ -25,6 +25,10 @@ export interface ScreenAppeal {
       id: number;
       file: string;
     }>;
+    answerer?: {
+      full_name: string;
+      phone: string;
+    };
   };
 }
 
@@ -163,6 +167,12 @@ export const mapApiAppealToScreenAppeal = (
                 file: file.file || '',
               }))
             : [],
+          answerer: apiAppeal.appeal_response.answerer
+            ? {
+                full_name: apiAppeal.appeal_response.answerer.full_name || '',
+                phone: apiAppeal.appeal_response.answerer.phone || '',
+              }
+            : undefined,
         }
       : undefined;
 
@@ -223,6 +233,12 @@ export const mapApiAppealsToScreenAppeals = (
                   file: file.file || '',
                 }))
               : [],
+            answerer: apiAppeal.appeal_response.answerer
+              ? {
+                  full_name: apiAppeal.appeal_response.answerer.full_name || '',
+                  phone: apiAppeal.appeal_response.answerer.phone || '',
+                }
+              : undefined,
           }
         : undefined;
 

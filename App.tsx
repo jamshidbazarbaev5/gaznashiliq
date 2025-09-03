@@ -1,12 +1,19 @@
 import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {StatusBar, View, ActivityIndicator, StyleSheet} from 'react-native';
+import {
+  StatusBar,
+  View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+} from 'react-native';
 
 import {
   LoginScreen,
   RegistrationScreen,
   AppealStatusScreen,
+  LanguageSelection,
 } from './src/screens';
 import BottomTabNavigator from './src/navigation/BottomTabNavigator';
 import {
@@ -16,6 +23,7 @@ import {
   ThemeProvider,
   useTheme,
   LanguageProvider,
+  useLanguage,
 } from './src/contexts';
 import {ToastContainer, SimpleLaunchScreen} from './src/components';
 import {useFirstLaunch} from './src/hooks/useFirstLaunch';
@@ -25,14 +33,25 @@ const Stack = createNativeStackNavigator();
 const AppNavigator = (): React.JSX.Element => {
   const {isAuthenticated, loading} = useAuth();
   const {colors} = useTheme();
+  const {language, isLanguageSelected, setLanguage} = useLanguage();
   const {
     isFirstLaunch,
     loading: firstLaunchLoading,
     markFirstLaunchComplete,
   } = useFirstLaunch();
+  const [hasSelectedLanguage, setHasSelectedLanguage] = React.useState(false);
+
+  React.useEffect(() => {
+    // Don't set default language automatically - let user choose
+    if (!loading && !firstLaunchLoading) {
+      console.log('Initial loading completed');
+    }
+  }, [loading, firstLaunchLoading]);
 
   // Testing mode - set to true to always show launch screen for testing
   const TESTING_MODE = false;
+
+
 
   console.log('App.tsx: State check -', {
     loading,
@@ -51,6 +70,20 @@ const AppNavigator = (): React.JSX.Element => {
     );
   }
 
+  // Always check language first, regardless of first launch status
+  if (!language || (!isLanguageSelected && !hasSelectedLanguage)) {
+    console.log('App.tsx: Showing language selector');
+    return (
+      <LanguageSelection
+        onLanguageSelected={() => {
+          setHasSelectedLanguage(true);
+          markFirstLaunchComplete();
+        }}
+      />
+    );
+  }
+
+  // After language is selected, show launch screen if it's first launch
   if (isFirstLaunch || TESTING_MODE) {
     console.log('App.tsx: Showing SimpleLaunchScreen');
     return (
@@ -60,7 +93,6 @@ const AppNavigator = (): React.JSX.Element => {
       />
     );
   }
-
   console.log('App.tsx: Proceeding to main navigation');
 
   return (
